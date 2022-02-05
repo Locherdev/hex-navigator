@@ -19,6 +19,7 @@ var Alternative_Paths = []
 var Final_Path = []
 var Overlay_Map = []
 var Overlay_Map_Objects = []
+var Overlap_Map = []
 
 func _ready(): pass
 
@@ -31,9 +32,8 @@ func get_mouse_coord():
 	return world_to_map(get_global_mouse_position()/2) # /2 because Scale=2.0
 
 func get_tile_terrain_name() -> String:
-	var tile_type = tile_set.tile_get_name(get_cellv(get_mouse_coord()))
-	if tile_type: return tile_type
-	return "Blank"
+	if (get_cellv(get_mouse_coord()) == -1) : return "Blank"
+	return tile_set.tile_get_name(get_cellv(get_mouse_coord()))
 
 # --- Overlay
 
@@ -47,10 +47,14 @@ func get_instance_by_agent():
 func clear_overlay():
 	Overlay_Map = []
 	Overlay_Map_Objects = []
+	Overlap_Map = []
 	for _i in range(get_child_count()): remove_child(get_child(0))
 
 func remove_object_by_id(id: int):
 	for tile in objectmap.get_used_cells_by_id(id): objectmap.set_cellv(tile, -1)
+
+func place_object_by_id(id: int, location: Vector2):
+	objectmap.set_cellv(location, id)
 
 func place_object(type: int, agent: bool):
 	var mouse_coord = get_mouse_coord()
@@ -79,14 +83,17 @@ func place_overlay(tile_coord: Vector2):
 		Overlay_Map_Objects.append(overlay_tile)
 		add_child(overlay_tile)
 
-func get_overlay_by_tile(type: int) -> Object:
-	match type:
-		Constants.TERRAIN.FOREST:	return OverlayForest.instance()
-		Constants.TERRAIN.GRAS:  	return OverlayGras.instance()
-		Constants.TERRAIN.HILL:  	return OverlayHill.instance()
-		Constants.TERRAIN.TOWN:  	return OverlayTown.instance()
-		Constants.TERRAIN.WATER: 	return OverlayWater.instance()
-	return OverlayGras.instance()
+func add_overlap_agent(index: int, list: Array) -> Array:
+	for i in Overlap_Map.size():
+		if (index < Overlap_Map[i].size()):
+			list.append(Overlap_Map[i][index])
+	return list
+
+func delete_overlap_agent(index: int, list: Array) -> Array:
+	for i in Overlap_Map.size():
+		if (index < Overlap_Map[i].size()):
+			list.erase(Overlap_Map[i][index])
+	return list
 
 # --- Path Finder
 
@@ -94,124 +101,136 @@ func find_path() -> Array:
 	clear_overlay()
 	
 	var agent_goal_coord = create_coord_pairs()
-	print("Found coord-pairs: ", agent_goal_coord)
 	if agent_goal_coord.empty(): return []
 	
 	var complete_navigation_paths = Array()
 	for current_pair in agent_goal_coord:
+		Current_Agent = objectmap.get_cellv(current_pair[0])
+		var route = best_first_search(current_pair[0], current_pair[1])
+		if route:
+			var trunc_route = truncate_correction(route)
+			if trunc_route.size() < route.size() && trunc_route.back() == current_pair[1]: route = trunc_route
+			for i in range(route.size()) : place_overlay(route[i])
+			Overlap_Map.append(route)
 		
-		var current_tile = current_pair[0]
-		var goal_tile = current_pair[1]
-		
-		Current_Agent = objectmap.get_cellv(current_tile)
-		var list_visited_tiles = [ current_tile ]
-		Final_Path = [ current_tile ]
-		Alternative_Paths = [ Vector2() ]
-		var alternative_paths_exist = false
-		var backtrack = -2
-		var skipped_tiles = []
-		var distance_to_goal = calculate_distance( current_tile, goal_tile )
-		var shortest_path = distance_to_goal + 1 #it includes the start tile
-		
-		print("Axial Distance: ",calculate_axial_distance(current_tile, goal_tile))
-		print("Offset Distance: ", offsetY_distance(current_tile, goal_tile))
-		
-		while distance_to_goal > 0:
-			var next_step = find_next_step(current_tile, goal_tile, list_visited_tiles)
-			if next_step.x != INF : #we actually found the next step
-				var next_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.y]
-				if next_step.z != -1 :
-					var alternative_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.z]
-					Alternative_Paths.append(alternative_tile)
-					alternative_paths_exist = true
-				else:
-					Alternative_Paths.append(Vector2()) # to ensure that Alternative_Paths and list_visited_tiles have an equal size
-				distance_to_goal = next_step.x
-				current_tile = next_tile
-				list_visited_tiles.append(current_tile)
-				Final_Path.append(current_tile)
-				backtrack = -2
-			else:
-				current_tile = list_visited_tiles[backtrack]
-				backtrack -= 1
-				skipped_tiles.append(Final_Path[-1])
-				Final_Path.remove( Final_Path.size()-1 )
-				Alternative_Paths.remove( Alternative_Paths.size()-1 )
-				if Final_Path.size() == 0:
-					print("We cant reach it")
-					break
-			
-		check_for_shortcuts()
-		
-		if alternative_paths_exist && shortest_path != Final_Path.size() :
-			var check_all_paths = true
-			while check_all_paths:
-				check_all_paths = false
-				for i in range(Alternative_Paths.size()-2) :
-					if Alternative_Paths[i] != Vector2() :
-						var alternate_list_tiles_checked = Final_Path.slice(0, i+1, 1, false)
-						var alternate_list_paths_checked = Alternative_Paths.slice(0, i-1, 1, false)
-						var tiles_to_remove = 2
-						for j in range(skipped_tiles.size()) :
-							alternate_list_tiles_checked.append(skipped_tiles[j])
-							tiles_to_remove += 1
-						current_tile = alternate_list_tiles_checked[i-1]
-						distance_to_goal = offsetY_distance(current_tile, goal_tile)
-						var old_length = Final_Path.size()
-						var new_length = i
-						
-						while distance_to_goal > 0 && new_length < old_length - 1 :
-							var next_step = find_next_step(current_tile, goal_tile, alternate_list_tiles_checked)
-							if next_step.x != INF : #we actually found the next step
-								var next_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.y]
-								if next_step.z != -1 :
-									var alternative_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.z]
-									alternate_list_paths_checked.append(alternative_tile)
-								else:
-									alternate_list_paths_checked.append(Vector2()) # to ensure that Alternative_Paths and list_visited_tiles have an equal size
-								distance_to_goal = next_step.x
-								current_tile = next_tile
-								alternate_list_tiles_checked.append(current_tile)
-								new_length += 1
-							else:
-								break
-						if distance_to_goal == 0:
-							check_all_paths = true
-							for _i in range(tiles_to_remove) :
-								alternate_list_tiles_checked.remove(i)
-							Alternative_Paths = alternate_list_paths_checked
-							Final_Path = alternate_list_tiles_checked
-							check_for_shortcuts()
-							break
-							
-		Final_Path = bug1_correction(Final_Path)
-		
-		for i in range(Final_Path.size()) :
-			place_overlay(Final_Path[i])
-		
-		complete_navigation_paths.append(Final_Path)
+		complete_navigation_paths.append(route)
+		Constants.activate_route(Current_Agent)
 	return complete_navigation_paths
 
-func bug1_correction(route: Array) -> Array:
-	var neighbor_count = 0
-	var neighboring_tiles = offset_neighbors[get_offset_parity(route[0])]
-	var last_neighbor_found = Vector2()
-	for i in range( neighboring_tiles.size() ):
-		var adjacent_tile = route[0] + neighboring_tiles[i]
-		if route.has(adjacent_tile):
-			neighbor_count += 1
-			last_neighbor_found = adjacent_tile
-	if neighbor_count > 1:
-		var corrected_array = [route[0]]
-		corrected_array.append_array(route.slice(route.find(last_neighbor_found), route.size()-1, 1, false))
-		print("[Bug1] Changing neighbor from ", route[1], " to ", last_neighbor_found)
-		print("Before: ",route)
-		print("After: ", corrected_array)
-		return corrected_array
+# Best First Search
+func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
+	var list_visited_tiles = [ current_tile ]
+	Final_Path = [ current_tile ]
+	Alternative_Paths = [ Vector2() ]
+	var alternative_paths_exist = false
+	var backtrack = -2
+	var skipped_tiles = []
+	var distance_to_goal = calculate_distance( current_tile, goal_tile )
+	var shortest_path = distance_to_goal + 1 #it includes the start tile
+	
+	var overlap_index = 0
+	
+	while distance_to_goal > 0:
+		overlap_index += 1
+		list_visited_tiles = add_overlap_agent(overlap_index, list_visited_tiles)
+		print("---")
+		print(Overlap_Map)
+		print(list_visited_tiles)
+		print("---")
+		var next_step = find_next_step(current_tile, goal_tile, list_visited_tiles)
+		list_visited_tiles = delete_overlap_agent(overlap_index, list_visited_tiles)
 		
-	else:
-		print("No correction needed")
-		return route
+		if next_step.x != INF : #we actually found the next step
+			var next_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.y]
+			if next_step.z != -1 :
+				var alternative_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.z]
+				Alternative_Paths.append(alternative_tile)
+				alternative_paths_exist = true
+			else:
+				Alternative_Paths.append(Vector2()) # to ensure that Alternative_Paths and list_visited_tiles have an equal size
+			distance_to_goal = next_step.x
+			current_tile = next_tile
+			list_visited_tiles.append(current_tile)
+			Final_Path.append(current_tile)
+			backtrack = -2
+		else:
+			current_tile = list_visited_tiles[backtrack]
+			backtrack -= 1
+			skipped_tiles.append(Final_Path[-1])
+			Final_Path.remove( Final_Path.size()-1 )
+			Alternative_Paths.remove( Alternative_Paths.size()-1 )
+			if Final_Path.size() == 0:
+				print("We cant reach it")
+				break
+	
+	check_for_shortcuts()
+	
+	if alternative_paths_exist && shortest_path != Final_Path.size() :
+		var check_all_paths = true
+		while check_all_paths:
+			check_all_paths = false
+			for i in range(Alternative_Paths.size()-2) :
+				if Alternative_Paths[i] != Vector2() :
+					var alternate_list_tiles_checked = Final_Path.slice(0, i+1, 1, false)
+					var alternate_list_paths_checked = Alternative_Paths.slice(0, i-1, 1, false)
+					var tiles_to_remove = 2
+					for j in range(skipped_tiles.size()) :
+						alternate_list_tiles_checked.append(skipped_tiles[j])
+						tiles_to_remove += 1
+					current_tile = alternate_list_tiles_checked[i-1]
+					distance_to_goal = offsetY_distance(current_tile, goal_tile)
+					var old_length = Final_Path.size()
+					var new_length = i
+					
+					while distance_to_goal > 0 && new_length < old_length - 1 :
+						var next_step = find_next_step(current_tile, goal_tile, alternate_list_tiles_checked)
+						if next_step.x != INF : #we actually found the next step
+							var next_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.y]
+							if next_step.z != -1 :
+								var alternative_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.z]
+								alternate_list_paths_checked.append(alternative_tile)
+							else:
+								alternate_list_paths_checked.append(Vector2()) # to ensure that Alternative_Paths and list_visited_tiles have an equal size
+							distance_to_goal = next_step.x
+							current_tile = next_tile
+							alternate_list_tiles_checked.append(current_tile)
+							new_length += 1
+						else:
+							break
+					if distance_to_goal == 0:
+						check_all_paths = true
+						for _i in range(tiles_to_remove) :
+							alternate_list_tiles_checked.remove(i)
+						Alternative_Paths = alternate_list_paths_checked
+						Final_Path = alternate_list_tiles_checked
+						check_for_shortcuts()
+						break
+						
+	return Final_Path
+
+func bug1_correction(route: Array) -> Array:
+	var last_neighbor_index = 1
+	var neighbors = get_all_tile_neighbors(route[0])
+	for i in range(route.size()-1, -1, -1):
+		if route[i] in neighbors: 
+			last_neighbor_index = i
+			break;
+	if last_neighbor_index == 1: return route
+	
+	var corrected_array = [route[0]]
+	corrected_array.append_array(route.slice(last_neighbor_index, route.size()-1, 1, false))
+	print("[Bug1] Changing neighbor from ", route[1], " to ", route[last_neighbor_index])
+	print("Before: ",route)
+	print("After: ", corrected_array)
+	return corrected_array
+
+func truncate_correction(route: Array) -> Array:
+	var trunc_route = truncation(route)
+	var routeA = best_first_search(trunc_route[0], trunc_route[1])
+	var routeB = best_first_search(trunc_route[1], trunc_route[2])
+	routeA.erase(routeA.back())
+	trunc_route = bug1_correction(routeA + routeB)
+	return trunc_route
 
 func check_for_shortcuts():
 	var ii = 0
@@ -232,10 +251,13 @@ func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tile
 	var next_tile = Vector2()
 	var tile_distance = 0
 	var neighboring_tiles = offset_neighbors[get_offset_parity(current_tile)]
+	var tile_considered = true
 	
 	for i in range( neighboring_tiles.size() ):
 		next_tile = current_tile + neighboring_tiles[i]
-		if not (list_visited_tiles.has(next_tile) || is_not_traversable(next_tile)):
+		if list_visited_tiles.has(next_tile): tile_considered = false
+		if not is_traversable(next_tile): tile_considered = false
+		if tile_considered:
 			tile_distance = offsetY_distance(next_tile, goal_tile)
 			if tile_distance < adjacent_tile.x :
 				adjacent_tile.x = tile_distance
@@ -243,20 +265,32 @@ func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tile
 			elif tile_distance == adjacent_tile.x :
 				temporal_distance = tile_distance
 				adjacent_tile.z = i
+		else: tile_considered = true
 	if adjacent_tile.z != -1:
 		if temporal_distance != adjacent_tile.x :
 			adjacent_tile.z = -1
+	if not adjacent_tile:
+		print("Debug: ", current_tile)
 	return adjacent_tile
 
 # --- Helper
 
+func truncation(array: Array) -> Array:
+	var trunc_array = []
+	trunc_array.append(array.front())
+	trunc_array.append(array[floor(array.size()/2)])
+	trunc_array.append(array.back())
+	return trunc_array
+
 func is_within_border(tile: Vector2) -> bool:
 	return tile.x > BORDER_MIN.x && tile.y > BORDER_MIN.y && tile.x < BORDER_MAX.x && tile.y < BORDER_MAX.y
 
-func is_not_traversable(target_tile: Vector2) -> bool:
+func is_traversable(target_tile: Vector2) -> bool:
 	var tiletype = get_cellv(target_tile)
-	return [Constants.TERRAIN.WATER, -1].has(tiletype)
-	#return tiletype != Constants.TERRAIN.WATER || tiletype != -1
+	if Current_Agent == 2:
+		return not tiletype in [Constants.TERRAIN.WATER, Constants.TERRAIN.HILL, -1]
+	else:
+		return not tiletype in [Constants.TERRAIN.WATER, -1]
 
 func create_coord_pairs() -> Array:
 	var agent_goal_pairs = Array()
@@ -268,21 +302,6 @@ func create_coord_pairs() -> Array:
 		agent_goal_pairs.append([objectmap.get_used_cells_by_id(Constants.AGENT.VEHICLE)[0], objectmap.get_used_cells_by_id(Constants.AGENT.VEHICLE_G)[0]])
 	return agent_goal_pairs
 
-func extract_goals():
-	var pedestrian = objectmap.get_used_cells_by_id(Constants.AGENT.PEDESTRIAN_G)
-	var bicycle = objectmap.get_used_cells_by_id(Constants.AGENT.BICYCLE_G)
-	var vehicle = objectmap.get_used_cells_by_id(Constants.AGENT.VEHICLE_G)
-	return { "pedestrian": pedestrian, "bicycle": bicycle, "vehicle": vehicle }
-
-func extract_agents():
-	var pedestrian = objectmap.get_used_cells_by_id(Constants.AGENT.PEDESTRIAN)
-	var bicycle = objectmap.get_used_cells_by_id(Constants.AGENT.BICYCLE)
-	var vehicle = objectmap.get_used_cells_by_id(Constants.AGENT.VEHICLE)
-	return { "pedestrian": pedestrian, "bicycle": bicycle, "vehicle": vehicle }
-
-func get_agent_by_id(id: int):
-	return objectmap.get_used_cells_by_id(id)
-
 func calculate_distance(start: Vector2, end: Vector2) -> float:
 	var distance_x = end.x - start.x
 	var distance_y = end.y - start.y
@@ -290,26 +309,6 @@ func calculate_distance(start: Vector2, end: Vector2) -> float:
 		return abs(distance_x + distance_y)
 	else:
 		return max(abs(distance_x), abs(distance_y))
-
-# --- Axial Helper
-
-var axial_direction_vectors = [ Vector2(1,0), Vector2(1,-1), Vector2(0,-1),Vector2(-1,0), Vector2(-1,1), Vector2(0,1) ]
-
-func axial_direction(direction) -> Vector2:
-	return axial_direction_vectors[direction]
-
-func axial_add(tile, vector) -> Vector2:
-	return Vector2(tile.x + vector.x, tile.y + vector.y)
-
-func axial_neighbor(tile, direction) -> Vector2:
-	return axial_add(tile, axial_direction(direction))
-
-func calculate_axial_distance(a, b):
-	return (
-		abs(a.x - b.x) + 
-		abs(a.x + a.y - b.x - b.y) + 
-		abs(a.y - b.y)
-		) / 2
 
 # --- Offset Helpers
 
@@ -330,6 +329,13 @@ func get_tile_neighbor(tile, direction):
 	var diff = offset_neighbors[parity][direction]
 	return Vector2(tile.x + diff[0], tile.y + diff[1])
 
+func get_all_tile_neighbors(tile: Vector2) -> Array:
+	var neighboring_tiles = offset_neighbors[get_offset_parity(tile)]
+	var neighbors = []
+	for i in range(neighboring_tiles.size()):
+		neighbors.append(tile + neighboring_tiles[i])
+	return neighbors
+
 func offsetY_to_arial(tile):
 	tile.y = (tile.y - (floor( tile.x/2) ))
 	return tile
@@ -339,4 +345,97 @@ func offsetY_distance(a,b):
 	var bc = offsetY_to_arial(b)
 	return calculate_axial_distance(ac, bc)
 
-# --- DEBUG
+func calculate_axial_distance(a, b):
+	return (
+		abs(a.x - b.x) + 
+		abs(a.x + a.y - b.x - b.y) + 
+		abs(a.y - b.y)
+		) / 2
+
+# --- Step by Step
+
+func prepare_step_by_step(paths: Array, agents: Array):
+	clear_overlay()
+	objectmap.clear()
+	reset_step_positions(paths, agents)
+
+func reset_step_positions(paths: Array, agents: Array):
+	var path_pedestrian = false
+	var path_bicycle = false
+	var path_vehicle = false
+	for agent in agents:
+		match agent:
+			0: path_pedestrian = true
+			1: path_bicycle = true
+			2: path_vehicle = true
+	for i in range(paths.size()) :
+		if path_pedestrian:
+			objectmap.set_cellv(paths[i].front(), Constants.AGENT.PEDESTRIAN)
+			objectmap.set_cellv(paths[i].back(), Constants.AGENT.PEDESTRIAN_G)
+			path_pedestrian = false
+		elif path_bicycle:
+			objectmap.set_cellv(paths[i].front(), Constants.AGENT.BICYCLE)
+			objectmap.set_cellv(paths[i].back(), Constants.AGENT.BICYCLE_G)
+			path_bicycle = false
+		elif path_vehicle:
+			objectmap.set_cellv(paths[i].front(), Constants.AGENT.VEHICLE)
+			objectmap.set_cellv(paths[i].back(), Constants.AGENT.VEHICLE_G)
+			path_vehicle = false
+
+func step_forward(count: int, paths: Array, agents: Array):
+	var path_pedestrian = false
+	var path_bicycle = false
+	var path_vehicle = false
+	for agent in agents:
+		match agent:
+			0: path_pedestrian = true
+			1: path_bicycle = true
+			2: path_vehicle = true
+	for i in range(paths.size()) :
+		if path_pedestrian:
+			if (paths[i].size() > count):
+				remove_object_by_id(0)
+				objectmap.set_cellv(paths[i][count], Constants.AGENT.PEDESTRIAN)
+			path_pedestrian = false
+		elif path_bicycle:
+			if (paths[i].size() > count):
+				remove_object_by_id(1)
+				objectmap.set_cellv(paths[i][count], Constants.AGENT.BICYCLE)
+			path_bicycle = false
+		elif path_vehicle:
+			if (paths[i].size() > count):
+				remove_object_by_id(2)
+				objectmap.set_cellv(paths[i][count], Constants.AGENT.VEHICLE)
+			path_vehicle = false
+
+func step_backward(count: int, paths: Array, agents: Array):
+	var path_pedestrian = false
+	var path_bicycle = false
+	var path_vehicle = false
+	for agent in agents:
+		match agent:
+			0: path_pedestrian = true
+			1: path_bicycle = true
+			2: path_vehicle = true
+	for i in range(paths.size()) :
+		if path_pedestrian:
+			if (paths[i].size() > count):
+				remove_object_by_id(0)
+				objectmap.set_cellv(paths[i][count], Constants.AGENT.PEDESTRIAN)
+				if (paths[i].size()-2 == count):
+					objectmap.set_cellv(paths[i][count+1], Constants.AGENT.PEDESTRIAN_G)
+			path_pedestrian = false
+		elif path_bicycle:
+			if (paths[i].size() > count):
+				remove_object_by_id(1)
+				objectmap.set_cellv(paths[i][count], Constants.AGENT.BICYCLE)
+				if (paths[i].size()-2 == count):
+					objectmap.set_cellv(paths[i][count+1], Constants.AGENT.BICYCLE_G)
+			path_bicycle = false
+		elif path_vehicle:
+			if (paths[i].size() > count):
+				remove_object_by_id(2)
+				objectmap.set_cellv(paths[i][count], Constants.AGENT.VEHICLE)
+				if (paths[i].size()-2 == count):
+					objectmap.set_cellv(paths[i][count+1], Constants.AGENT.VEHICLE_G)
+			path_vehicle = false
