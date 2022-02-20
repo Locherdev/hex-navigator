@@ -94,6 +94,13 @@ func delete_overlap_agent(index: int, list: Array) -> Array:
 		if (index < Overlap_Map[i].size()):
 			list.erase(Overlap_Map[i][index])
 	return list
+	
+func get_overlap_agents(index: int) -> Array:
+	var agents = []
+	for i in Overlap_Map.size():
+		if (index < Overlap_Map[i].size()):
+			agents.append(Overlap_Map[i][index])
+	return agents
 
 # --- Path Finder
 
@@ -234,8 +241,8 @@ func truncate_correction(route: Array) -> Array:
 func check_for_shortcuts():
 	var ii = 0
 	while true:
-		if Final_Path.size() - ii <= 2 :
-			break
+		if Final_Path.size() - ii <= 2 : break
+		if get_overlap_agents(ii+1).has(Final_Path[ii+2]): ii += 1
 		else:
 			if offsetY_distance(Final_Path[ii], Final_Path[ii+2]) == 1:
 				Final_Path.remove(ii+1)
