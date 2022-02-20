@@ -108,7 +108,7 @@ func find_path() -> Array:
 		Current_Agent = objectmap.get_cellv(current_pair[0])
 		var route = best_first_search(current_pair[0], current_pair[1])
 		if route:
-			var trunc_route = truncate_correction(route)
+			#var trunc_route = truncate_correction(route)
 			#if trunc_route.size() < route.size() && trunc_route.back() == current_pair[1]: route = trunc_route
 			for i in range(route.size()) : place_overlay(route[i])
 			Overlap_Map.append(route)
@@ -132,9 +132,9 @@ func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 	
 	while distance_to_goal > 0:
 		overlap_index += 1
-		#list_visited_tiles = add_overlap_agent(overlap_index, list_visited_tiles)
+		list_visited_tiles = add_overlap_agent(overlap_index, list_visited_tiles)
 		var next_step = find_next_step(current_tile, goal_tile, list_visited_tiles)
-		#list_visited_tiles = delete_overlap_agent(overlap_index, list_visited_tiles)
+		list_visited_tiles = delete_overlap_agent(overlap_index, list_visited_tiles)
 		
 		if next_step.x != INF : #we actually found the next step
 			var next_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.y]
@@ -148,7 +148,6 @@ func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 			current_tile = next_tile
 			list_visited_tiles.append(current_tile)
 			Final_Path.append(current_tile)
-			calculate_distance_cost(current_tile)
 			backtrack = -2
 		else:
 			current_tile = list_visited_tiles[backtrack]
@@ -159,7 +158,7 @@ func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 			if Final_Path.size() == 0:
 				print("We cant reach it")
 				break
-	
+
 	check_for_shortcuts()
 	
 	if alternative_paths_exist && shortest_path != Final_Path.size() :
@@ -180,7 +179,10 @@ func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 					var new_length = i
 					
 					while distance_to_goal > 0 && new_length < old_length - 1 :
+						list_visited_tiles = add_overlap_agent(overlap_index, list_visited_tiles)
 						var next_step = find_next_step(current_tile, goal_tile, alternate_list_tiles_checked)
+						list_visited_tiles = delete_overlap_agent(overlap_index, list_visited_tiles)
+						
 						if next_step.x != INF : #we actually found the next step
 							var next_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.y]
 							if next_step.z != -1 :
@@ -249,6 +251,7 @@ func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tile
 	var next_tile = Vector2()
 	var tile_distance = 0
 	var distance_cost = calculate_distance_cost(next_tile)
+	var alternative_tile = -1
 	var neighboring_tiles = offset_neighbors[get_offset_parity(current_tile)]
 	var tile_considered = true
 	
@@ -260,15 +263,30 @@ func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tile
 			tile_distance = offsetY_distance(next_tile, goal_tile)
 			distance_cost = calculate_distance_cost(next_tile)
 			if tile_distance < adjacent_tile.x :
-				adjacent_tile.x = tile_distance
-				adjacent_tile.y = i
+				if distance_cost < adjacent_cost:
+					distance_cost = adjacent_cost
+					adjacent_tile.x = tile_distance
+					adjacent_tile.y = i
+				else:
+					temporal_distance = tile_distance
+					alternative_tile = i
 			elif tile_distance == adjacent_tile.x :
 				temporal_distance = tile_distance
 				adjacent_tile.z = i
 		else: tile_considered = true
+	if alternative_tile != -1:
+		if temporal_distance == adjacent_tile.x :
+			adjacent_tile.z = alternative_tile
 	if adjacent_tile.z != -1:
 		if temporal_distance != adjacent_tile.x :
 			adjacent_tile.z = -1
+		else:
+			var firstChoice = current_tile + neighboring_tiles[adjacent_tile.y]
+			var secondChoice = current_tile + neighboring_tiles[adjacent_tile.z]
+			if calculate_distance_cost(firstChoice) > calculate_distance_cost(secondChoice):
+				alternative_tile = adjacent_tile.z
+				adjacent_tile.z = adjacent_tile.y
+				adjacent_tile.y = alternative_tile
 	if not adjacent_tile:
 		print("Debug: ", current_tile)
 	return adjacent_tile
