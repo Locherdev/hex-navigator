@@ -109,7 +109,7 @@ func find_path() -> Array:
 		var route = best_first_search(current_pair[0], current_pair[1])
 		if route:
 			var trunc_route = truncate_correction(route)
-			if trunc_route.size() < route.size() && trunc_route.back() == current_pair[1]: route = trunc_route
+			#if trunc_route.size() < route.size() && trunc_route.back() == current_pair[1]: route = trunc_route
 			for i in range(route.size()) : place_overlay(route[i])
 			Overlap_Map.append(route)
 		
@@ -132,13 +132,9 @@ func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 	
 	while distance_to_goal > 0:
 		overlap_index += 1
-		list_visited_tiles = add_overlap_agent(overlap_index, list_visited_tiles)
-		print("---")
-		print(Overlap_Map)
-		print(list_visited_tiles)
-		print("---")
+		#list_visited_tiles = add_overlap_agent(overlap_index, list_visited_tiles)
 		var next_step = find_next_step(current_tile, goal_tile, list_visited_tiles)
-		list_visited_tiles = delete_overlap_agent(overlap_index, list_visited_tiles)
+		#list_visited_tiles = delete_overlap_agent(overlap_index, list_visited_tiles)
 		
 		if next_step.x != INF : #we actually found the next step
 			var next_tile = current_tile + offset_neighbors[get_offset_parity(current_tile)][next_step.y]
@@ -152,6 +148,7 @@ func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 			current_tile = next_tile
 			list_visited_tiles.append(current_tile)
 			Final_Path.append(current_tile)
+			calculate_distance_cost(current_tile)
 			backtrack = -2
 		else:
 			current_tile = list_visited_tiles[backtrack]
@@ -247,9 +244,11 @@ func check_for_shortcuts():
 # return: Vector3(Distance-To-Goal, Neighbor-Direction-Index, If-Branching-Path)
 func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tiles: Array) -> Vector3:
 	var adjacent_tile = Vector3(INF, INF, -1)
+	var adjacent_cost = INF
 	var temporal_distance = INF
 	var next_tile = Vector2()
 	var tile_distance = 0
+	var distance_cost = calculate_distance_cost(next_tile)
 	var neighboring_tiles = offset_neighbors[get_offset_parity(current_tile)]
 	var tile_considered = true
 	
@@ -259,6 +258,7 @@ func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tile
 		if not is_traversable(next_tile): tile_considered = false
 		if tile_considered:
 			tile_distance = offsetY_distance(next_tile, goal_tile)
+			distance_cost = calculate_distance_cost(next_tile)
 			if tile_distance < adjacent_tile.x :
 				adjacent_tile.x = tile_distance
 				adjacent_tile.y = i
@@ -351,6 +351,27 @@ func calculate_axial_distance(a, b):
 		abs(a.x + a.y - b.x - b.y) + 
 		abs(a.y - b.y)
 		) / 2
+
+func calculate_distance_cost(tile: Vector2) -> int:
+	match get_cellv(tile):
+		Constants.TERRAIN.GRAS: 
+			return 1
+		Constants.TERRAIN.FOREST: 
+			match Current_Agent:
+				Constants.AGENT.PEDESTRIAN: return 2
+				Constants.AGENT.BICYCLE: return 2
+				Constants.AGENT.VEHICLE: return 2
+		Constants.TERRAIN.HILL: 
+			match Current_Agent:
+				Constants.AGENT.PEDESTRIAN: return 3
+				Constants.AGENT.BICYCLE: return 3
+				Constants.AGENT.VEHICLE: return 99
+		Constants.TERRAIN.TOWN:
+			match Current_Agent:
+				Constants.AGENT.PEDESTRIAN: return 1
+				Constants.AGENT.BICYCLE: return 1
+				Constants.AGENT.VEHICLE: return 1
+	return 99
 
 # --- Step by Step
 
