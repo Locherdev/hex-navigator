@@ -7,11 +7,13 @@ onready var camera = $Camera2D
 const MAX = 1000
 const CAM_SPEED = 100
 const MOUSE_CAM_RADIUS = 100
+onready var rng = RandomNumberGenerator.new()
 
 func _ready():
 	camera.make_current()
 	tilemap.connect_agentmap(agentmap, MAX, MAX)
 	camera.position = Vector2(640, 340)
+	rng.randomize()
 
 func _process(_delta):
 	if Input.is_action_just_released("rightclick"):
@@ -25,9 +27,8 @@ func _preparation():
 	agentmap.clear()
 	for y in MAX:
 		for x in MAX:
-			var rng = RandomNumberGenerator.new()
-			rng.randomize()
-			tilemap.set_cellv(Vector2(x,y), rng.randi_range(0,4))
+			var random = rng.randi_range(0,4)
+			tilemap.set_cellv(Vector2(x,y), random)
 	tilemap.set_cellv(Vector2(20,20), Constants.TERRAIN.TOWN)
 	tilemap.set_cellv(Vector2(MAX-20,MAX-20), Constants.TERRAIN.TOWN)
 	agentmap.set_cellv(Vector2(20,20), Constants.AGENT.PEDESTRIAN)
