@@ -37,9 +37,6 @@ func _process(_delta):
 	if tilemap.is_within_border(tilemap.get_mouse_coord()):
 		Constants.set_label($AnalyticLayer/ControlBox/gridInfo, tilemap.get_tile_terrain_name()+": " + str(tilemap.get_mouse_coord()))
 	else: Constants.set_label($AnalyticLayer/ControlBox/gridInfo, "")
-	
-	if Input.is_action_just_released("wheelclick"):
-			print(tilemap.best_first_search(Vector2(6,3), Vector2(0,9)))
 
 func detect_UI():
 	if (Input.is_action_just_released("leftclick")):
@@ -137,6 +134,12 @@ func analyze_paths() :
 			active_agents.append(Constants.AGENT.VEHICLE)
 
 # --- Buttons ---
+func _on_BreadthFirstSearch_pressed():
+	Constants.reset_route_results()
+	mode = 2
+	reset_UI_highlight()
+	tilemap.breath_first_search()
+	
 func _best_first_search():
 	Constants.reset_route_results()
 	mode = 2
@@ -160,7 +163,6 @@ func step_forward():
 	if (step_by_step == highest_step): 
 		$AnalyticLayer/StartBox/Buttons/ForwardButton.disabled = true
 
-
 func step_backward():
 	step_by_step -= 1
 	$AnalyticLayer/StartBox/Buttons/ForwardButton.disabled = false
@@ -168,6 +170,7 @@ func step_backward():
 	if (step_by_step == 0): 
 		$AnalyticLayer/StartBox/Buttons/BackwardButton.disabled = true
 
+func _on_Exit_pressed(): get_tree().change_scene("res://TitleScreen.tscn")
 
 # --- DEBUG ---
 
@@ -177,5 +180,3 @@ func get_highest_step() -> int:
 		if (paths[i].size()-1 > highest):
 			highest = paths[i].size()-1
 	return highest
-
-

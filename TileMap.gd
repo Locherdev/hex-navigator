@@ -1,18 +1,18 @@
 extends TileMap
 
-const OverlayForest = preload("res://Assets/Overlay/OverlayForest.tscn")
-const OverlayGras = preload("res://Assets/Overlay/OverlayGras.tscn")
-const OverlayHill = preload("res://Assets/Overlay/OverlayHill.tscn")
-const OverlayTown = preload("res://Assets/Overlay/OverlayTown.tscn")
-const OverlayWater = preload("res://Assets/Overlay/OverlayWater.tscn")
+#const OverlayForest = preload("res://Assets/Overlay/OverlayForest.tscn")
+#const OverlayHill = preload("res://Assets/Overlay/OverlayHill.tscn")
+#const OverlayTown = preload("res://Assets/Overlay/OverlayTown.tscn")
+#const OverlayWater = preload("res://Assets/Overlay/OverlayWater.tscn")
 
+const OverlayGras = preload("res://Assets/Overlay/OverlayGras.tscn")
 const OverlayPedestrian = preload("res://Assets/Overlay/OverlayPedestrian.tscn")
 const OverlayBicycle = preload("res://Assets/Overlay/OverlayBicycle.tscn")
 const OverlayVehicle = preload("res://Assets/Overlay/OverlayVehicle.tscn")
 
 var objectmap = TileMap
 const BORDER_MIN = Vector2(-1,-1)
-const BORDER_MAX = Vector2(20,13)
+var BORDER_MAX = Vector2(20,13)
 
 var Current_Agent = -1
 var Alternative_Paths = []
@@ -21,10 +21,143 @@ var Overlay_Map = []
 var Overlay_Map_Objects = []
 var Overlap_Map = []
 
+# - BREATH FIRST
+var Move_Count = 0
+var Nodes_Left_Layer = 1
+var Nodes_Next_Layer = 0
+var Nodes_Queue = []
+var Nodes_Matrix = []
+
 func _ready(): pass
 
-func connect_agentmap(tilemap: Object):
+func connect_agentmap(tilemap: Object, map_x = 20, map_y = 13):
 	objectmap = tilemap
+	BORDER_MAX = Vector2(map_x, map_y)
+
+# --- DIJKSTRA BREATH FIRST SEARCH START
+
+func breath_first_search():
+	print("Breath first search")
+	clear_overlay()
+	
+	var agent_goal_coord = create_coord_pairs()
+	if agent_goal_coord.empty(): return []
+	
+	var complete_navigation_paths = Array()
+	for current_pair in agent_goal_coord:
+		Nodes_Matrix = construct_adjacency_map()
+		var route = calculate_breath_first_search(current_pair[0], current_pair[1])
+		for i in range(route.size()) : 
+			place_overlay(route[i])
+			#print(Nodes_Matrix[route[i].x][route[i].y])
+		Overlap_Map.append(route)
+
+func calculate_breath_first_search(start_tile: Vector2, goal_tile: Vector2) -> Array:
+	Current_Agent = objectmap.get_cellv(start_tile)
+	Move_Count = 0
+	Nodes_Left_Layer = 1
+	Nodes_Next_Layer = 0
+	Nodes_Queue = []
+	var reached_end = false
+	
+	Nodes_Queue.append(start_tile)
+	Nodes_Matrix[start_tile[0]][start_tile[1]].visited = true
+	Nodes_Matrix[start_tile[0]][start_tile[1]].cost = 0
+	
+	while Nodes_Queue.size() > 0:
+		var inspected_node = Nodes_Queue.pop_front()
+		if inspected_node == goal_tile:
+			reached_end = true
+			break
+		#remove_tile_from_neighbors(inspected_node)
+		add_neighbors_to_queue(inspected_node)
+		#restore_tile_from_neighbors(inspected_node)
+		Nodes_Left_Layer -= 1
+		if Nodes_Left_Layer == 0:
+			Nodes_Left_Layer = Nodes_Next_Layer
+			Nodes_Next_Layer = 0
+			Move_Count += 1
+	if reached_end:
+		print("MoveCount: ", Move_Count, " - Agent: ",Current_Agent)
+		return recount_path_to_goal(start_tile, goal_tile)
+	else:
+		print("Failed MoveCount: ", Move_Count, " - Agent: ",Current_Agent)
+		return []
+
+func recount_path_to_goal(start: Vector2, goal: Vector2) -> Array:
+	var current_tile = goal
+	var path = []
+	var move_count = Move_Count
+	path.append(goal)
+	Nodes_Matrix[current_tile.x][current_tile.y].blocked = move_count
+	
+	while current_tile != start:
+		path.append(Nodes_Matrix[current_tile.x][current_tile.y].origin)
+		current_tile = Nodes_Matrix[current_tile.x][current_tile.y].origin
+		move_count -= 1
+		Nodes_Matrix[current_tile.x][current_tile.y].blocked = move_count
+	path.invert()
+	return path
+
+func add_neighbors_to_queue(tile: Vector2):
+	for neighbor in Nodes_Matrix[tile.x][tile.y].neighbors:
+		# Skip out of bound
+		if not is_within_border(neighbor): continue
+		# Skip blocked tiles
+		if not is_traversable(neighbor): continue
+		# Skip if another agent is on the tile
+		if overlap_with_another_agent(neighbor): continue
+		# Skip visited tiles but update cost
+		if Nodes_Matrix[neighbor.x][neighbor.y].visited: 
+			update_cost(tile, neighbor)
+			continue
+		
+		Nodes_Queue.append(neighbor)
+		Nodes_Matrix[neighbor.x][neighbor.y].visited = true
+		Nodes_Matrix[neighbor.x][neighbor.y].origin = tile
+		Nodes_Matrix[neighbor.x][neighbor.y].cost = Nodes_Matrix[tile.x][tile.y].cost + calculate_distance_cost(neighbor)
+		Nodes_Next_Layer += 1
+
+func update_cost(tile, neighbor):
+	var temp_cost = Nodes_Matrix[tile.x][tile.y].cost + calculate_distance_cost(neighbor)
+	if temp_cost < Nodes_Matrix[neighbor.x][neighbor.y].cost:
+		Nodes_Matrix[neighbor.x][neighbor.y].origin = tile
+		Nodes_Matrix[neighbor.x][neighbor.y].cost = temp_cost
+
+func overlap_with_another_agent(tile) -> bool:
+	for i in Overlap_Map.size():
+		if (Move_Count+1 < Overlap_Map[i].size()):
+			if Overlap_Map[i][Move_Count+1] == tile:
+				return true
+	return false
+
+# return an adjacency map of each tile of the tilemap with information about neighbors, tiletype
+func construct_adjacency_map() -> Array:
+	var world = []
+	for x in range(BORDER_MAX.x):
+		world.append([])
+		world[x] = []
+		for y in range(BORDER_MAX.y):
+			var tile = Vector2(x,y)
+			var neighbors = offset_neighbors[get_offset_parity(tile)]
+			var neighbor_tiles = []
+			for i in range( neighbors.size() ):
+				var neighbor_tile = tile + neighbors[i]
+				if is_within_border(neighbor_tile):
+					neighbor_tiles.append(neighbor_tile)
+			world[x].append([])
+			world[x][y] = {
+				"neighbors": neighbor_tiles,
+				"visited": false,
+				"tile": get_cellv(Vector2(x,y)),
+				"cost": INF,
+				"origin": Vector2(),
+				"blocked": null
+			}
+	return world
+	
+# --- DIJKSTRA END
+
 
 # --- DEBUG
 
@@ -124,7 +257,7 @@ func find_path() -> Array:
 		Constants.activate_route(Current_Agent)
 	return complete_navigation_paths
 
-# Best First Search
+# Greedy Best First Search
 func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 	var list_visited_tiles = [ current_tile ]
 	Final_Path = [ current_tile ]
@@ -214,42 +347,6 @@ func best_first_search(current_tile: Vector2, goal_tile: Vector2) -> Array:
 						
 	return Final_Path
 
-func bug1_correction(route: Array) -> Array:
-	var last_neighbor_index = 1
-	var neighbors = get_all_tile_neighbors(route[0])
-	for i in range(route.size()-1, -1, -1):
-		if route[i] in neighbors: 
-			last_neighbor_index = i
-			break;
-	if last_neighbor_index == 1: return route
-	
-	var corrected_array = [route[0]]
-	corrected_array.append_array(route.slice(last_neighbor_index, route.size()-1, 1, false))
-	print("[Bug1] Changing neighbor from ", route[1], " to ", route[last_neighbor_index])
-	print("Before: ",route)
-	print("After: ", corrected_array)
-	return corrected_array
-
-func truncate_correction(route: Array) -> Array:
-	var trunc_route = truncation(route)
-	var routeA = best_first_search(trunc_route[0], trunc_route[1])
-	var routeB = best_first_search(trunc_route[1], trunc_route[2])
-	routeA.erase(routeA.back())
-	trunc_route = bug1_correction(routeA + routeB)
-	return trunc_route
-
-func check_for_shortcuts():
-	var ii = 0
-	while true:
-		if Final_Path.size() - ii <= 2 : break
-		if get_overlap_agents(ii+1).has(Final_Path[ii+2]): ii += 1
-		else:
-			if offsetY_distance(Final_Path[ii], Final_Path[ii+2]) == 1:
-				Final_Path.remove(ii+1)
-				Alternative_Paths.remove(ii+1)
-			else:
-				ii += 1
-
 # return: Vector3(Distance-To-Goal, Neighbor-Direction-Index, If-Branching-Path)
 func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tiles: Array) -> Vector3:
 	var adjacent_tile = Vector3(INF, INF, -1)
@@ -297,6 +394,44 @@ func find_next_step(current_tile: Vector2, goal_tile: Vector2, list_visited_tile
 	if not adjacent_tile:
 		print("Debug: ", current_tile)
 	return adjacent_tile
+
+func check_for_shortcuts():
+	var ii = 0
+	while true:
+		if Final_Path.size() - ii <= 2 : break
+		if get_overlap_agents(ii+1).has(Final_Path[ii+2]): ii += 1
+		else:
+			if offsetY_distance(Final_Path[ii], Final_Path[ii+2]) == 1:
+				Final_Path.remove(ii+1)
+				Alternative_Paths.remove(ii+1)
+			else:
+				ii += 1
+
+# --- Correction
+
+func bug1_correction(route: Array) -> Array:
+	var last_neighbor_index = 1
+	var neighbors = get_all_tile_neighbors(route[0])
+	for i in range(route.size()-1, -1, -1):
+		if route[i] in neighbors: 
+			last_neighbor_index = i
+			break;
+	if last_neighbor_index == 1: return route
+	
+	var corrected_array = [route[0]]
+	corrected_array.append_array(route.slice(last_neighbor_index, route.size()-1, 1, false))
+	print("[Bug1] Changing neighbor from ", route[1], " to ", route[last_neighbor_index])
+	print("Before: ",route)
+	print("After: ", corrected_array)
+	return corrected_array
+
+func truncate_correction(route: Array) -> Array:
+	var trunc_route = truncation(route)
+	var routeA = best_first_search(trunc_route[0], trunc_route[1])
+	var routeB = best_first_search(trunc_route[1], trunc_route[2])
+	routeA.erase(routeA.back())
+	trunc_route = bug1_correction(routeA + routeB)
+	return trunc_route
 
 # --- Helper
 
@@ -361,14 +496,14 @@ func get_all_tile_neighbors(tile: Vector2) -> Array:
 		neighbors.append(tile + neighboring_tiles[i])
 	return neighbors
 
-func offsetY_to_arial(tile):
-	tile.y = (tile.y - (floor( tile.x/2) ))
-	return tile
-
 func offsetY_distance(a,b):
 	var ac = offsetY_to_arial(a)
 	var bc = offsetY_to_arial(b)
 	return calculate_axial_distance(ac, bc)
+
+func offsetY_to_arial(tile):
+	tile.y = (tile.y - (floor( tile.x/2) ))
+	return tile
 
 func calculate_axial_distance(a, b):
 	return (

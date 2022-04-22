@@ -1,0 +1,89 @@
+[gd_scene load_steps=8 format=2]
+
+[ext_resource path="res://Assets/Font/Glacial_trackname.tres" type="DynamicFont" id=1]
+[ext_resource path="res://standard_tileset.tres" type="TileSet" id=2]
+[ext_resource path="res://World_LARGE.gd" type="Script" id=3]
+[ext_resource path="res://assets/font/GlacialIndifference-Regular.otf" type="DynamicFontData" id=4]
+[ext_resource path="res://agent_tileset.tres" type="TileSet" id=9]
+[ext_resource path="res://TileMap.gd" type="Script" id=10]
+
+[sub_resource type="DynamicFont" id=1]
+size = 30
+font_data = ExtResource( 4 )
+
+[node name="World_LARGE" type="Node2D"]
+script = ExtResource( 3 )
+
+[node name="TileMap" type="TileMap" parent="."]
+scale = Vector2( 0.5, 0.5 )
+tile_set = ExtResource( 2 )
+cell_size = Vector2( 24, 28 )
+cell_custom_transform = Transform2D( 8, 0, 0, 8, 0, 0 )
+cell_half_offset = 1
+format = 1
+script = ExtResource( 10 )
+
+[node name="ObjectMap" type="TileMap" parent="."]
+scale = Vector2( 0.5, 0.5 )
+tile_set = ExtResource( 9 )
+cell_size = Vector2( 24, 28 )
+cell_custom_transform = Transform2D( 8, 0, 0, 8, 0, 0 )
+cell_half_offset = 1
+format = 1
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Control" type="Control" parent="CanvasLayer"]
+anchor_right = 0.3
+anchor_bottom = 0.3
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 8.0
+margin_bottom = -1.52588e-05
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="CreateMap" type="Button" parent="CanvasLayer/Control"]
+anchor_right = 0.5
+custom_fonts/font = ExtResource( 1 )
+text = "Create Map"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="FindPath" type="Button" parent="CanvasLayer/Control"]
+anchor_top = 0.2
+anchor_right = 0.5
+anchor_bottom = 0.3
+custom_fonts/font = ExtResource( 1 )
+text = "Find Path"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="CanvasLayer/Control"]
+anchor_top = 0.4
+anchor_bottom = 0.6
+rect_scale = Vector2( 0.75, 0.75 )
+custom_fonts/font = SubResource( 1 )
+text = "RightClick: Camera"
+
+[node name="Exit" type="Button" parent="CanvasLayer"]
+anchor_top = 0.9
+anchor_right = 0.05
+anchor_bottom = 1.0
+margin_left = 10.0
+margin_top = 10.0
+margin_bottom = -10.0
+custom_fonts/font = ExtResource( 1 )
+text = "Exit"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Camera2D" type="Camera2D" parent="."]
+
+[connection signal="pressed" from="CanvasLayer/Control/CreateMap" to="." method="_on_CreateMap_pressed"]
+[connection signal="pressed" from="CanvasLayer/Control/FindPath" to="." method="_on_FindPath_pressed"]
+[connection signal="pressed" from="CanvasLayer/Exit" to="." method="_on_Exit_pressed"]

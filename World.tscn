@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=2]
+[gd_scene load_steps=19 format=2]
 
 [ext_resource path="res://Assets/Tileset/clear.png" type="Texture" id=1]
 [ext_resource path="res://standard_tileset.tres" type="TileSet" id=2]
@@ -6,7 +6,6 @@
 [ext_resource path="res://assets/font/GlacialIndifference-Regular.otf" type="DynamicFontData" id=4]
 [ext_resource path="res://Assets/Tileset/pedestrian.png" type="Texture" id=5]
 [ext_resource path="res://Assets/Tileset/bicycle.png" type="Texture" id=6]
-[ext_resource path="res://AgentList.tres" type="ButtonGroup" id=7]
 [ext_resource path="res://Assets/Tileset/vehicle.png" type="Texture" id=8]
 [ext_resource path="res://agent_tileset.tres" type="TileSet" id=9]
 [ext_resource path="res://TileMap.gd" type="Script" id=10]
@@ -20,108 +19,11 @@
 [ext_resource path="res://Assets/Font/titlescreen_footer.tres" type="DynamicFont" id=18]
 
 [sub_resource type="DynamicFont" id=1]
-size = 50
-outline_size = 5
-outline_color = Color( 1, 0, 0, 1 )
-extra_spacing_char = 10
+size = 20
 font_data = ExtResource( 4 )
 
 [node name="World" type="Node2D"]
 script = ExtResource( 3 )
-
-[node name="UILayer" type="CanvasLayer" parent="."]
-
-[node name="ColorRect" type="ColorRect" parent="UILayer"]
-visible = false
-anchor_top = 0.8
-anchor_right = 1.0
-anchor_bottom = 1.0
-margin_left = 20.0
-margin_right = -20.0
-margin_bottom = -20.0
-color = Color( 0.364706, 0.364706, 0.364706, 1 )
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="UIContainer" type="Control" parent="UILayer"]
-visible = false
-anchor_top = 0.8
-anchor_right = 1.0
-anchor_bottom = 1.0
-margin_left = 20.0
-margin_right = -20.0
-margin_bottom = -20.0
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="Agents" type="VBoxContainer" parent="UILayer/UIContainer"]
-anchor_right = 0.3
-anchor_bottom = 1.0
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="Label" type="Label" parent="UILayer/UIContainer/Agents"]
-margin_right = 372.0
-margin_bottom = 61.0
-custom_colors/font_outline_modulate = Color( 1, 0, 0, 1 )
-custom_fonts/font = SubResource( 1 )
-text = "Agents"
-align = 1
-
-[node name="AgentList" type="HBoxContainer" parent="UILayer/UIContainer/Agents"]
-margin_top = 65.0
-margin_right = 372.0
-margin_bottom = 113.0
-grow_horizontal = 2
-grow_vertical = 2
-custom_constants/separation = 30
-alignment = 1
-
-[node name="Pedestrian" type="TextureButton" parent="UILayer/UIContainer/Agents/AgentList"]
-margin_left = 108.0
-margin_right = 140.0
-margin_bottom = 48.0
-toggle_mode = true
-action_mode = 0
-group = ExtResource( 7 )
-texture_normal = ExtResource( 5 )
-
-[node name="Bicycle" type="TextureButton" parent="UILayer/UIContainer/Agents/AgentList"]
-margin_left = 170.0
-margin_right = 202.0
-margin_bottom = 48.0
-toggle_mode = true
-action_mode = 0
-group = ExtResource( 7 )
-texture_normal = ExtResource( 6 )
-
-[node name="Vehicle" type="TextureButton" parent="UILayer/UIContainer/Agents/AgentList"]
-margin_left = 232.0
-margin_right = 264.0
-margin_bottom = 48.0
-toggle_mode = true
-action_mode = 0
-group = ExtResource( 7 )
-texture_normal = ExtResource( 8 )
-
-[node name="Tiles" type="VBoxContainer" parent="UILayer/UIContainer"]
-anchor_left = 0.5
-anchor_right = 1.0
-anchor_bottom = 1.0
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="Label" type="Label" parent="UILayer/UIContainer/Tiles"]
-margin_right = 620.0
-margin_bottom = 61.0
-custom_colors/font_outline_modulate = Color( 1, 0, 0, 1 )
-custom_fonts/font = SubResource( 1 )
-text = "Tile Manager"
-align = 1
 
 [node name="AnalyticLayer" type="CanvasLayer" parent="."]
 
@@ -145,14 +47,12 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="CurrentTile_Label" type="Label" parent="AnalyticLayer/TitleBox"]
-anchor_right = 1.0
-anchor_bottom = 0.2
-margin_top = 43.0
-margin_bottom = -87.6
-custom_fonts/font = ExtResource( 11 )
-text = "ver. 0.54b"
-align = 1
+[node name="Exit" type="Button" parent="AnalyticLayer/TitleBox"]
+anchor_left = 0.25
+anchor_right = 0.75
+margin_top = 45.0
+custom_fonts/font = SubResource( 1 )
+text = "Back to Menu"
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -330,7 +230,26 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
+[node name="BreadthFirstSearch" type="Button" parent="AnalyticLayer/StartBox"]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.3
+text = "Breadth-First-Search"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="BreadthFirstSearch2" type="Button" parent="AnalyticLayer/StartBox"]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.3
+text = "Breadth-First-Search"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [node name="InfoBox" type="Control" parent="AnalyticLayer"]
+visible = false
 anchor_left = 0.75
 anchor_top = 0.8
 anchor_right = 1.0
@@ -438,7 +357,7 @@ cell_size = Vector2( 24, 28 )
 cell_custom_transform = Transform2D( 32, 0, 0, 32, 0, 0 )
 cell_half_offset = 1
 format = 1
-tile_data = PoolIntArray( 0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 1, 0, 4, 1, 0, 5, 0, 0, 6, 4, 0, 7, 4, 0, 8, 4, 0, 9, 4, 0, 10, 4, 0, 11, 4, 0, 12, 4, 0, 13, 4, 0, 14, 4, 0, 15, 4, 0, 65536, 0, 0, 65537, 0, 0, 65538, 1, 0, 65539, 0, 0, 65540, 1, 0, 65541, 0, 0, 65542, 0, 0, 65543, 0, 0, 65544, 4, 0, 65545, 4, 0, 65546, 4, 0, 65547, 4, 0, 65548, 4, 0, 65549, 4, 0, 65550, 4, 0, 65551, 1, 0, 65552, 4, 0, 131072, 1, 0, 131073, 0, 0, 131074, 0, 0, 131075, 1, 0, 131076, 0, 0, 131077, 1, 0, 131078, 0, 0, 131079, 1, 0, 131080, 0, 0, 131081, 4, 0, 131082, 4, 0, 131083, 4, 0, 131084, 4, 0, 131085, 3, 0, 131086, 4, 0, 131087, 1, 0, 131088, 4, 0, 196608, 1, 0, 196609, 3, 0, 196610, 1, 0, 196611, 0, 0, 196612, 0, 0, 196613, 0, 0, 196614, 1, 0, 196615, 1, 0, 196616, 4, 0, 196617, 4, 0, 196618, 4, 0, 196619, 4, 0, 196620, 4, 0, 196621, 1, 0, 196622, 1, 0, 196623, 1, 0, 196624, 1, 0, 196625, 1, 0, 262144, 0, 0, 262145, 0, 0, 262146, 0, 0, 262147, 0, 0, 262148, 0, 0, 262149, 0, 0, 262150, 0, 0, 262151, 4, 0, 262152, 1, 0, 262153, 1, 0, 262154, 4, 0, 262155, 1, 0, 262156, 1, 0, 262157, 2, 0, 262158, 1, 0, 262159, 1, 0, 262160, 2, 0, 262161, 2, 0, 327680, 4, 0, 327681, 4, 0, 327682, 4, 0, 327683, 4, 0, 327684, 0, 0, 327685, 4, 0, 327686, 4, 0, 327687, 4, 0, 327688, 4, 0, 327689, 4, 0, 327690, 1, 0, 327691, 1, 0, 327692, 1, 0, 327693, 2, 0, 327694, 2, 0, 327695, 1, 0, 327696, 2, 0, 327697, 3, 0, 393216, 4, 0, 393217, 4, 0, 393218, 4, 0, 393219, 4, 0, 393220, 4, 0, 393221, 4, 0, 393222, 4, 0, 393223, 4, 0, 393224, 4, 0, 393225, 1, 0, 393226, 1, 0, 393227, 1, 0, 393228, 1, 0, 393229, 1, 0, 393230, 2, 0, 393231, 1, 0, 393232, 1, 0, 393233, 1, 0, 458752, 1, 0, 458753, 1, 0, 458754, 4, 0, 458755, 4, 0, 458756, 4, 0, 458757, 4, 0, 458758, 4, 0, 458759, 1, 0, 458760, 4, 0, 458761, 2, 0, 458762, 2, 0, 458763, 1, 0, 458764, 1, 0, 458765, 1, 0, 458766, 1, 0, 458767, 1, 0, 458768, 1, 0, 458769, 4, 0, 458770, 1, 0, 524288, 1, 0, 524289, 1, 0, 524290, 1, 0, 524291, 1, 0, 524292, 1, 0, 524293, 1, 0, 524294, 1, 0, 524295, 2, 0, 524296, 1, 0, 524297, 1, 0, 524298, 2, 0, 524299, 2, 0, 524300, 2, 0, 524301, 1, 0, 524302, 1, 0, 524303, 3, 0, 524304, 1, 0, 524305, 1, 0, 524306, 1, 0, 589824, 1, 0, 589825, 1, 0, 589826, 1, 0, 589827, 4, 0, 589828, 1, 0, 589829, 2, 0, 589830, 2, 0, 589831, 1, 0, 589832, 1, 0, 589833, 1, 0, 589834, 2, 0, 589835, 1, 0, 589836, 1, 0, 589837, 1, 0, 589838, 1, 0, 589839, 1, 0, 655360, 4, 0, 655361, 4, 0, 655362, 4, 0, 655363, 4, 0, 655364, 4, 0, 655365, 2, 0, 655366, 1, 0, 655367, 3, 0, 655368, 1, 0, 655369, 1, 0, 655370, 1, 0, 655371, 1, 0, 655372, 1, 0, 655373, 1, 0, 655374, 1, 0, 720896, 4, 0, 720897, 4, 0, 720898, 1, 0, 720899, 1, 0, 720900, 4, 0, 720901, 4, 0, 720902, 3, 0, 720903, 3, 0, 720904, 1, 0, 720905, 1, 0, 720906, 1, 0, 786432, 4, 0, 786434, 2, 0, 786436, 4, 0, 786438, 4, 0, 786440, 4, 0, 786442, 4, 0 )
+tile_data = PoolIntArray( 0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 1, 0, 4, 1, 0, 5, 0, 0, 6, 4, 0, 7, 4, 0, 8, 4, 0, 9, 4, 0, 10, 4, 0, 11, 4, 0, 12, 4, 0, 13, 4, 0, 14, 4, 0, 15, 4, 0, 16, 4, 0, 17, 4, 0, 18, 4, 0, 19, 4, 0, 65536, 0, 0, 65537, 0, 0, 65538, 1, 0, 65539, 0, 0, 65540, 1, 0, 65541, 0, 0, 65542, 0, 0, 65543, 0, 0, 65544, 4, 0, 65545, 4, 0, 65546, 4, 0, 65547, 4, 0, 65548, 4, 0, 65549, 4, 0, 65550, 4, 0, 65551, 1, 0, 65552, 4, 0, 65553, 4, 0, 65554, 4, 0, 65555, 4, 0, 131072, 1, 0, 131073, 0, 0, 131074, 0, 0, 131075, 1, 0, 131076, 0, 0, 131077, 1, 0, 131078, 0, 0, 131079, 1, 0, 131080, 0, 0, 131081, 4, 0, 131082, 4, 0, 131083, 4, 0, 131084, 4, 0, 131085, 3, 0, 131086, 4, 0, 131087, 1, 0, 131088, 4, 0, 131089, 4, 0, 131090, 4, 0, 131091, 4, 0, 196608, 1, 0, 196609, 3, 0, 196610, 1, 0, 196611, 0, 0, 196612, 0, 0, 196613, 0, 0, 196614, 1, 0, 196615, 1, 0, 196616, 1, 0, 196617, 1, 0, 196618, 4, 0, 196619, 4, 0, 196620, 4, 0, 196621, 1, 0, 196622, 1, 0, 196623, 2, 0, 196624, 2, 0, 196625, 2, 0, 196626, 4, 0, 196627, 4, 0, 262144, 0, 0, 262145, 0, 0, 262146, 0, 0, 262147, 0, 0, 262148, 0, 0, 262149, 1, 0, 262150, 0, 0, 262151, 1, 0, 262152, 1, 0, 262153, 1, 0, 262154, 1, 0, 262155, 1, 0, 262156, 1, 0, 262157, 1, 0, 262158, 1, 0, 262159, 1, 0, 262160, 2, 0, 262161, 2, 0, 262162, 4, 0, 262163, 4, 0, 327680, 4, 0, 327681, 4, 0, 327682, 4, 0, 327683, 1, 0, 327684, 0, 0, 327685, 1, 0, 327686, 1, 0, 327687, 3, 0, 327688, 1, 0, 327689, 4, 0, 327690, 1, 0, 327691, 1, 0, 327692, 1, 0, 327693, 1, 0, 327694, 1, 0, 327695, 1, 0, 327696, 2, 0, 327697, 3, 0, 327698, 4, 0, 327699, 4, 0, 393216, 4, 0, 393217, 4, 0, 393218, 4, 0, 393219, 1, 0, 393220, 1, 0, 393221, 1, 0, 393222, 1, 0, 393223, 1, 0, 393224, 4, 0, 393225, 4, 0, 393226, 4, 0, 393227, 1, 0, 393228, 1, 0, 393229, 1, 0, 393230, 1, 0, 393231, 1, 0, 393232, 1, 0, 393233, 1, 0, 393234, 4, 0, 393235, 4, 0, 458752, 1, 0, 458753, 1, 0, 458754, 1, 0, 458755, 1, 0, 458756, 1, 0, 458757, 1, 0, 458758, 1, 0, 458759, 4, 0, 458760, 4, 0, 458761, 2, 0, 458762, 4, 0, 458763, 1, 0, 458764, 1, 0, 458765, 1, 0, 458766, 1, 0, 458767, 1, 0, 458768, 1, 0, 458769, 4, 0, 458770, 1, 0, 458771, 4, 0, 524288, 1, 0, 524289, 1, 0, 524290, 1, 0, 524291, 1, 0, 524292, 2, 0, 524293, 2, 0, 524294, 1, 0, 524295, 2, 0, 524296, 1, 0, 524297, 1, 0, 524298, 2, 0, 524299, 2, 0, 524300, 2, 0, 524301, 1, 0, 524302, 1, 0, 524303, 3, 0, 524304, 1, 0, 524305, 1, 0, 524306, 1, 0, 524307, 4, 0, 589824, 1, 0, 589825, 1, 0, 589826, 1, 0, 589827, 4, 0, 589828, 2, 0, 589829, 2, 0, 589830, 2, 0, 589831, 1, 0, 589832, 1, 0, 589833, 1, 0, 589834, 2, 0, 589835, 1, 0, 589836, 1, 0, 589837, 1, 0, 589838, 1, 0, 589839, 1, 0, 589840, 4, 0, 589841, 4, 0, 589842, 4, 0, 589843, 4, 0, 655360, 4, 0, 655361, 4, 0, 655362, 4, 0, 655363, 4, 0, 655364, 4, 0, 655365, 2, 0, 655366, 1, 0, 655367, 3, 0, 655368, 1, 0, 655369, 1, 0, 655370, 1, 0, 655371, 1, 0, 655372, 1, 0, 655373, 1, 0, 655374, 1, 0, 655375, 2, 0, 655376, 4, 0, 655377, 2, 0, 655378, 4, 0, 655379, 4, 0, 720896, 4, 0, 720897, 4, 0, 720898, 1, 0, 720899, 1, 0, 720900, 4, 0, 720901, 4, 0, 720902, 3, 0, 720903, 3, 0, 720904, 1, 0, 720905, 1, 0, 720906, 1, 0, 720907, 4, 0, 720908, 4, 0, 720909, 4, 0, 720910, 4, 0, 720911, 4, 0, 720912, 2, 0, 720913, 1, 0, 720914, 1, 0, 720915, 4, 0, 786432, 4, 0, 786434, 2, 0, 786436, 4, 0, 786438, 4, 0, 786440, 4, 0, 786442, 4, 0, 786444, 4, 0, 786446, 4, 0, 786447, 4, 0, 786448, 4, 0, 786449, 4, 0, 786450, 4, 0 )
 script = ExtResource( 10 )
 
 [node name="BorderMap" type="TileMap" parent="."]
@@ -458,10 +377,12 @@ cell_size = Vector2( 24, 28 )
 cell_custom_transform = Transform2D( 32, 0, 0, 32, 0, 0 )
 cell_half_offset = 1
 format = 1
-tile_data = PoolIntArray( 131076, 0, 0, 327690, 4, 0 )
+tile_data = PoolIntArray( 262157, 1, 0, 393222, 0, 0, 589839, 3, 0, 720906, 4, 0 )
 
-[connection signal="toggled" from="UILayer/UIContainer/Agents/AgentList/Pedestrian" to="." method="_on_Pedestrian_toggled"]
+[connection signal="pressed" from="AnalyticLayer/TitleBox/Exit" to="." method="_on_Exit_pressed"]
 [connection signal="pressed" from="AnalyticLayer/StartBox/Buttons/BestSearchButton" to="." method="_best_first_search"]
 [connection signal="pressed" from="AnalyticLayer/StartBox/Buttons/StepByStepButton" to="." method="step_by_step"]
 [connection signal="pressed" from="AnalyticLayer/StartBox/Buttons/BackwardButton" to="." method="step_backward"]
 [connection signal="pressed" from="AnalyticLayer/StartBox/Buttons/ForwardButton" to="." method="step_forward"]
+[connection signal="pressed" from="AnalyticLayer/StartBox/BreadthFirstSearch" to="." method="_on_BreadthFirstSearch_pressed"]
+[connection signal="pressed" from="AnalyticLayer/StartBox/BreadthFirstSearch2" to="." method="_on_BreadthFirstSearch_pressed"]
